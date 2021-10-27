@@ -1,0 +1,7 @@
+If you have downloaded the dataset from the provided link, you need to extract it here.
+
+You should see folder names like this in this folder:
+- aircraft
+- bird
+- miniimagenet
+...
