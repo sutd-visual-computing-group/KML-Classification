@@ -11,12 +11,12 @@ from scripts.sampler import ClassBalancedSampler
 from scripts.datasets.metadataset import Task
 
 
-class BirdMAMLSplit():
-    def __init__(self, root, train=True, num_train_classes=140,
+class MiniimagenetMAMLSplit():
+    def __init__(self, root, train=True, num_train_classes=1200,
                  transform=None, target_transform=None, **kwargs):
         self.transform = transform
         self.target_transform = target_transform
-        self.root = root + '/bird'
+        self.root = root + '/miniimagenet'
 
         self._train = train
 
@@ -54,11 +54,11 @@ class BirdMAMLSplit():
         return image, character_class
 
 
-class BirdMetaDataset(object):
+class MiniimagenetMetaDataset(object):
     """
     TODO: Check if the data loader is fast enough.
     Args:
-        root: path to bird dataset
+        root: path to miniimagenet dataset
         img_side_len: images are scaled to this size
         num_classes_per_batch: number of classes to sample for each batch
         num_samples_per_class: number of samples to sample for each class
@@ -67,7 +67,7 @@ class BirdMetaDataset(object):
         num_total_batches: total number of tasks to generate
         train: whether to create data loader from the test or validation data
     """
-    def __init__(self, name='Bird', root='data',
+    def __init__(self, name='MiniImageNet', root='data',
                  img_side_len=84, img_channel=3,
                  num_classes_per_batch=5, num_samples_per_class=6,
                  num_total_batches=200000,
@@ -89,12 +89,12 @@ class BirdMetaDataset(object):
 
         self._total_samples_per_class = (
             num_samples_per_class + num_val_samples)
-        self._dataloader = self._get_bird_data_loader()
+        self._dataloader = self._get_miniimagenet_data_loader()
 
         self.input_size = (img_channel, img_side_len, img_side_len)
         self.output_size = self._num_classes_per_batch
 
-    def _get_bird_data_loader(self):
+    def _get_miniimagenet_data_loader(self):
         assert self._img_channel == 1 or self._img_channel == 3
         resize = transforms.Resize(
             (self._img_side_len, self._img_side_len), Image.LANCZOS)
@@ -105,7 +105,7 @@ class BirdMetaDataset(object):
         else:
             img_transform = transforms.Compose(
                 [resize, transforms.ToTensor()])
-        dset = BirdMAMLSplit(
+        dset = MiniimagenetMAMLSplit(
             self._root, transform=img_transform, train=self._train,
             download=True, num_train_classes=self._num_train_classes)
         _, labels = zip(*dset._flat_character_images)

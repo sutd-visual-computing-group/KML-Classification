@@ -1,31 +1,45 @@
+import os
 import glob
 import random
 from collections import defaultdict
 
 import torch
+import numpy as np
 from PIL import Image
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from torchvision.datasets import Omniglot
+from torchvision.datasets.utils import list_files
 
 from scripts.sampler import ClassBalancedSampler
 from scripts.datasets.metadataset import Task
 
 
-class BirdMAMLSplit():
-    def __init__(self, root, train=True, num_train_classes=140,
-                 transform=None, target_transform=None, **kwargs):
-        self.transform = transform
-        self.target_transform = target_transform
-        self.root = root + '/bird'
+class OmniglotMAMLSplit(Omniglot):
+    """Implements similar train / test split for Omniglot as
+    https://github.com/cbfinn/maml/blob/master/data_generator.py
+
+    Uses torchvision.datasets.Omniglot for downloading and checking
+    dataset integrity.
+    """
+    def __init__(self, root, train=True, num_train_classes=1100, **kwargs):
+        super(OmniglotMAMLSplit, self).__init__(root, download=True,
+                                                background=True, **kwargs)
 
         self._train = train
+        self._num_train_classes = num_train_classes
 
+        # download testing data and test integrity
+        self.background = False
+        self.download()
+        if not self._check_integrity():
+            raise RuntimeError('Dataset not found or corrupted')
+
+        all_character_dirs = glob.glob(self.root + '/**/**/**')
         if self._train:
-            all_character_dirs = glob.glob(self.root + '/train/**')
-            self._characters = all_character_dirs
+            self._characters = all_character_dirs[:self._num_train_classes]
         else:
-            all_character_dirs = glob.glob(self.root + '/test/**')
-            self._characters = all_character_dirs
+            self._characters = all_character_dirs[self._num_train_classes:]
 
         self._character_images = []
         for i, char_path in enumerate(self._characters):
@@ -43,7 +57,7 @@ class BirdMAMLSplit():
             character class.
         """
         image_path, character_class = self._flat_character_images[index]
-        image = Image.open(image_path, mode='r')
+        image = Image.open(image_path, mode='r').convert('L')
 
         if self.transform:
             image = self.transform(image)
@@ -54,11 +68,11 @@ class BirdMAMLSplit():
         return image, character_class
 
 
-class BirdMetaDataset(object):
+class OmniglotMetaDataset(object):
     """
     TODO: Check if the data loader is fast enough.
     Args:
-        root: path to bird dataset
+        root: path to omniglot dataset
         img_side_len: images are scaled to this size
         num_classes_per_batch: number of classes to sample for each batch
         num_samples_per_class: number of samples to sample for each class
@@ -67,9 +81,9 @@ class BirdMetaDataset(object):
         num_total_batches: total number of tasks to generate
         train: whether to create data loader from the test or validation data
     """
-    def __init__(self, name='Bird', root='data',
-                 img_side_len=84, img_channel=3,
-                 num_classes_per_batch=5, num_samples_per_class=6,
+    def __init__(self, name='Omniglot', root='data', 
+                 img_side_len=28, img_channel=1,
+                 num_classes_per_batch=5, num_samples_per_class=6, 
                  num_total_batches=200000,
                  num_val_samples=1, meta_batch_size=40, train=True,
                  num_train_classes=1100, num_workers=0, device='cpu'):
@@ -89,33 +103,34 @@ class BirdMetaDataset(object):
 
         self._total_samples_per_class = (
             num_samples_per_class + num_val_samples)
-        self._dataloader = self._get_bird_data_loader()
+        self._dataloader = self._get_omniglot_data_loader()
 
         self.input_size = (img_channel, img_side_len, img_side_len)
         self.output_size = self._num_classes_per_batch
 
-    def _get_bird_data_loader(self):
+    def _get_omniglot_data_loader(self):
         assert self._img_channel == 1 or self._img_channel == 3
-        resize = transforms.Resize(
-            (self._img_side_len, self._img_side_len), Image.LANCZOS)
-        if self._img_channel == 1:
+        resize = transforms.Resize(self._img_side_len, Image.LANCZOS)
+        invert = transforms.Lambda(lambda x: 1.0 - x)
+        if self._img_channel > 1:
+            # tile the image
+            tile = transforms.Lambda(lambda x: x.repeat(self._img_channel, 1, 1))
             img_transform = transforms.Compose(
-                [resize, transforms.Grayscale(num_output_channels=1),
-                 transforms.ToTensor()])
+                [resize, transforms.ToTensor(), invert, tile])
         else:
             img_transform = transforms.Compose(
-                [resize, transforms.ToTensor()])
-        dset = BirdMAMLSplit(
-            self._root, transform=img_transform, train=self._train,
-            download=True, num_train_classes=self._num_train_classes)
+                [resize, transforms.ToTensor(), invert])
+        dset = OmniglotMAMLSplit(self._root, transform=img_transform,
+                                 train=self._train,
+                                 num_train_classes=self._num_train_classes)
         _, labels = zip(*dset._flat_character_images)
         sampler = ClassBalancedSampler(labels, self._num_classes_per_batch,
                                        self._total_samples_per_class,
                                        self._num_total_batches, self._train)
 
-        batch_size = (self._num_classes_per_batch *
-                      self._total_samples_per_class *
-                      self._meta_batch_size)
+        batch_size = (self._num_classes_per_batch
+                      * self._total_samples_per_class
+                      * self._meta_batch_size)
         loader = DataLoader(dset, batch_size=batch_size, sampler=sampler,
                             num_workers=self._num_workers, pin_memory=True)
         return loader
@@ -128,12 +143,22 @@ class BirdMetaDataset(object):
         random.shuffle(new_labels)
         labels = labels.tolist()
         label_set = set(labels)
-        label_map = {label: new_labels[i] for i, label in enumerate(label_set)}
+        label_map = {label: i for i, label in zip(new_labels, label_set)}
         labels = [label_map[l] for l in labels]
 
         label_indices = defaultdict(list)
         for i, label in enumerate(labels):
             label_indices[label].append(i)
+
+        # rotate randomly to create new classes
+        # TODO: move this to torch once supported.
+        for label, indices in label_indices.items():
+            rotation = np.random.randint(4)
+            for i in range(len(indices)):
+                img = imgs[indices[i]].numpy()
+                # copy here for contiguity
+                img = np.copy(np.rot90(img, k=rotation, axes=(1,2)))
+                imgs[indices[i]] = torch.from_numpy(img)
 
         # assign samples to train and validation sets
         val_indices = []
@@ -150,8 +175,8 @@ class BirdMetaDataset(object):
 
     def _make_meta_batch(self, imgs, labels):
         batches = []
-        inner_batch_size = (
-            self._total_samples_per_class * self._num_classes_per_batch)
+        inner_batch_size = (self._total_samples_per_class
+                            * self._num_classes_per_batch)
         for i in range(0, len(imgs) - 1, inner_batch_size):
             batch_imgs = imgs[i:i+inner_batch_size]
             batch_labels = labels[i:i+inner_batch_size]
