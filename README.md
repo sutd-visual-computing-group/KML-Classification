@@ -86,9 +86,3 @@ If you find this useful, please cite our paper
 [ProtoNet](https://github.com/jakesnell/prototypical-networks)
 
 
-
-
-
-
-# KML-Classification
-# KML-Classification
