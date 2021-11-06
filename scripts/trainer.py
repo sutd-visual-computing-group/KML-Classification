@@ -145,7 +145,7 @@ class Trainer(object):
 
             # Save model
             if (i % self._save_interval == 0 or i == 1) and is_training:
-                save_name = 'mdoel_{0}_{1}.pt'.format(self._model_type, i)
+                save_name = 'model_{0}_{1}.pt'.format(self._model_type, i)
                 save_path = os.path.join(self._save_folder, save_name)
                 with open(save_path, 'wb') as f:
                     torch.save(self._state_dict(), f)
