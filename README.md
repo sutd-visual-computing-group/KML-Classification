@@ -1,6 +1,6 @@
 # Revisit Multimodal Meta-Learning through the Lens of Multi-Task Learning
 
-This project is a PyTorch implementation of the **K**ernel **M**odu**L**ation (**KML**) idea proposed in [Revisit Multimodal Meta-Learning through the lens of Multi-Task Learning](), which will be published in [NeurIPS 2021](https://neurips.cc/). Please visit our [projrct page](miladabd.github.io/KML/) for more information.
+This project is a PyTorch implementation of the **K**ernel **M**odu**L**ation (**KML**) algorithm proposed in [Revisit Multimodal Meta-Learning through the lens of Multi-Task Learning](), which will be published in [NeurIPS 2021](https://neurips.cc/). Please visit our [projrct page](miladabd.github.io/KML/) for more information.
 
 ![Figure 1_v3](https://user-images.githubusercontent.com/29326313/137575589-e8e4e88f-813f-4eed-b4ac-c05672f018b8.jpg)
 
