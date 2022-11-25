@@ -67,13 +67,14 @@ For example, for 3Mode, 5w1s setup, use the follosing commend:
 If you find this useful, please cite our paper
 
 ```
-@inproceedings{
-abdollahzadeh2021revisit,
-title={Revisit Multimodal Meta-Learning through the Lens of Multi-Task Learning},
-author={Milad Abdollahzadeh and Touba Malekzadeh and Ngai-man Cheung},
-booktitle={Thirty-Fifth Conference on Neural Information Processing Systems},
-year={2021},
-url={https://openreview.net/forum?id=V5prUHOrOP4}
+@article
+{abdollahzadeh2021revisit,
+  title={Revisit multimodal meta-learning through the lens of multi-task learning},
+  author={Abdollahzadeh, Milad and Malekzadeh, Touba and Cheung, Ngai-Man Man},
+  journal={Advances in Neural Information Processing Systems},
+  volume={34},
+  pages={14632--14644},
+  year={2021}
 }
 ```
 
