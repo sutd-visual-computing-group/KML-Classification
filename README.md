@@ -48,7 +48,7 @@ Use following commands to train the model and reproduce our results:
 | 5w1s          | `main.py --multimodal_few_shot omniglot miniimagenet FC100 --kml-model True --output-folder kml_3mode_5w1s`|
 | 5w1s          | `main.py --multimodal_few_shot omniglot miniimagenet FC100 --kml-model True --num-samples-per-class 5 --output-folder kml_3mode_5w5s` |
 
-#### 2Mode (Omniglot, mini-ImageNet, FC100, CUB & Aircraft)
+#### 5Mode (Omniglot, mini-ImageNet, FC100, CUB & Aircraft)
 
 | Setup         | Command       |
 | ------------- |:-------------|
